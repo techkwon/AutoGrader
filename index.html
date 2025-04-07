@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Classroom Auto-Grader</title>
+    <style>
+      :root {
+        --primary-color: #4285f4;
+        --danger-color: #ea4335;
+        --success-color: #34a853;
+        --warning-color: #fbbc05;
+        --light-gray: #f9f9f9;
+        --border-color: #ddd;
+      }
+      
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        padding: 20px;
+        margin: 0;
+        background-color: #f5f5f5;
+        color: #333;
+        line-height: 1.6;
+      }
+      
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      
+      h2 {
+        color: var(--primary-color);
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      
+      .step {
+        background: white;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+        border-left: 4px solid var(--primary-color);
+      }
+      
+      .step-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      
+      .step-number {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        background-color: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 30px;
+        margin-right: 10px;
+        font-weight: bold;
+      }
+      
+      .step-title {
+        font-weight: bold;
+        font-size: 16px;
+      }
+      
+      label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 5px;
+      }
+      
+      select, button {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        font-size: 14px;
+      }
+      
+      select[multiple] {
+        height: 200px;
+      }
+      
+      button {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.3s;
+        margin-top: 15px;
+      }
+      
+      button:hover {
+        background-color: #3367d6;
+      }
+      
+      button:disabled {
+        background-color: #a8c7fa;
+        cursor: not-allowed;
+      }
+      
+      button.danger {
+        background-color: var(--danger-color);
+      }
+      
+      button.danger:hover {
+        background-color: #c5221f;
+      }
+      
+      #log {
+        border: 1px solid var(--border-color);
+        padding: 10px;
+        background: var(--light-gray);
+        height: 250px;
+        overflow-y: scroll;
+        font-family: monospace;
+        white-space: pre-wrap;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+      
+      .status-banner {
+        padding: 10px 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        display: none;
+      }
+      
+      .status-banner.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      
+      .status-banner.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      
+      .status-banner.warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+      }
+      
+      .progress-container {
+        width: 100%;
+        height: 20px;
+        background-color: #eee;
+        border-radius: 10px;
+        margin: 15px 0;
+        overflow: hidden;
+        display: none;
+      }
+      
+      .progress-bar {
+        height: 100%;
+        width: 0%;
+        background-color: var(--primary-color);
+        transition: width 0.3s;
+      }
+      
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .container {
+          padding: 15px;
+        }
+        
+        .step {
+          padding: 10px;
+        }
+        
+        select[multiple] {
+          height: 150px;
+        }
+      }
+      
+      .loading-spinner {
+        display: inline-block;
+        width: 15px;
+        height: 15px;
+        border: 3px solid rgba(255,255,255,.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-left: 5px;
+      }
+      
+      .badge-turned-in {
+        background-color: var(--success-color);
+        color: white;
+      }
+      
+      .badge-created {
+        background-color: var(--warning-color);
+        color: white;
+      }
+      
+      .badge-returned {
+        background-color: var(--primary-color);
+        color: white;
+      }
+      
+      .badge-count {
+        background-color: var(--light-gray);
+        color: #333;
+      }
+      
+      .student-item {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+      }
+      
+      .student-item:hover {
+        background-color: #f5f5f5;
+      }
+      
+      .student-checkbox {
+        margin-right: 10px;
+      }
+      
+      textarea {
+        width: 100%;
+        resize: vertical;
+        font-family: monospace;
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+      }
+      
+      .hint-text {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+      }
+      
+      .toggle-button {
+        margin-bottom: 15px;
+        background-color: #f5f5f5;
+        border: 1px solid var(--border-color);
+        color: #333;
+      }
+      
+      .toggle-button:hover {
+        background-color: #e8e8e8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>📚 Google Classroom 과제 채점기</h2>
+      
+      <div id="statusBanner" class="status-banner"></div>
+      
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">1</div>
+          <div class="step-title">과목 선택</div>
+        </div>
+        <select id="courseSelect" aria-label="과목 선택" onchange="loadCourseWork()"></select>
+      </div>
+      
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">2</div>
+          <div class="step-title">과제 선택</div>
+        </div>
+        <select id="courseWorkSelect" aria-label="과제 선택" onchange="loadStudents()">
+          <option value="">과목을 먼저 선택하세요</option>
+        </select>
+      </div>
+      
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">3</div>
+          <div class="step-title">학생 선택 (최대 30명)</div>
+        </div>
+        <div id="studentCountInfo">학생 목록이 로드되지 않았습니다</div>
+        
+        <div id="studentList" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; margin-bottom: 10px;">
+          <!-- 학생 목록이 여기에 추가됩니다 -->
+        </div>
+        
+        <div>
+          <button id="selectAllBtn" onclick="selectAllStudents()">모두 선택</button>
+          <button id="deselectAllBtn" onclick="deselectAllStudents()">모두 선택 해제</button>
+        </div>
+      </div>
+      
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">4</div>
+          <div class="step-title">시스템 프롬프트 설정</div>
+        </div>
+        <button id="showPromptSettingsBtn" class="toggle-button" onclick="togglePromptSettings()">시스템 프롬프트 설정 보기/숨기기</button>
+        
+        <div id="promptSettingsContainer" style="display: none; margin-top: 15px;">
+          <label for="systemPrompt">Gemini API 시스템 프롬프트:</label>
+          <textarea id="systemPrompt" style="width: 100%; height: 300px; font-family: monospace; margin-bottom: 10px;"></textarea>
+          <div style="display: flex; gap: 10px;">
+            <button onclick="savePrompt()">프롬프트 저장</button>
+            <button onclick="resetPromptToDefault()" class="danger">기본값으로 초기화</button>
+          </div>
+          <div style="margin-top: 10px; font-size: 12px; color: #666;">
+            <p>프롬프트에 사용할 수 있는 변수:</p>
+            <ul>
+              <li><code>{questionText}</code> - 문제 내용</li>
+              <li><code>{rubricText}</code> - 채점 기준</li>
+              <li><code>{studentAnswer}</code> - 학생 답안</li>
+            </ul>
+            <p>이 변수들은 실제 채점 시 해당 내용으로 자동 대체됩니다.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div id="progressContainer" class="progress-container">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+      
+      <button id="gradeBtn" onclick="gradeSelectedStudents()">
+        <span id="gradeBtnText">✅ 선택한 학생 채점하기</span>
+      </button>
+      
+      <button id="resetAuthButton" onclick="resetAuth()" class="danger">
+        🔄 인증 정보 초기화
+      </button>
+      
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">5</div>
+          <div class="step-title">처리 로그</div>
+        </div>
+        <div id="log"></div>
+      </div>
+    </div>
+
+    <script>
+      // 전역 변수
+      let isProcessing = false;
+      let studentData = [];
+      let processedCount = 0;
+      let totalSelected = 0;
+      
+      // 상태 메시지 표시 함수
+      function showStatus(message, type = 'success') {
+        const banner = document.getElementById('statusBanner');
+        banner.textContent = message;
+        banner.className = 'status-banner ' + type;
+        banner.style.display = 'block';
+        
+        // 성공 메시지는 5초 후 자동으로 숨김
+        if (type === 'success') {
+          setTimeout(() => {
+            banner.style.display = 'none';
+          }, 5000);
+        }
+      }
+      
+      // 로그 함수
+      function log(msg) {
+        const logDiv = document.getElementById('log');
+        const now = new Date();
+        const timestamp = now.toLocaleTimeString();
+        logDiv.textContent += `[${timestamp}] ${msg}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+      
+      // 과제 로드 함수
+      function loadCourseWork() {
+        const courseId = document.getElementById('courseSelect').value;
+        if (!courseId) return;
+        
+        const courseWorkSelect = document.getElementById('courseWorkSelect');
+        courseWorkSelect.innerHTML = '<option value="">과제 로딩 중...</option>';
+        document.getElementById('studentList').innerHTML = '';
+        updateButtonStates();
+        
+        log(`📥 과목 ID: ${courseId}의 과제 로딩 중...`);
+        
+        google.script.run
+          .withSuccessHandler(courseWorkHandler)
+          .withFailureHandler(errorHandler)
+          .getCourseWork(courseId);
+      }
+      
+      // 과제 응답 처리 함수
+      function courseWorkHandler(cwList) {
+        const select = document.getElementById('courseWorkSelect');
+        select.innerHTML = '';
+        
+        if (!cwList || cwList.length === 0) {
+          select.innerHTML = '<option value="">과제를 찾을 수 없음</option>';
+          log('⚠️ 이 과목에 과제가 없습니다');
+          return;
+        }
+        
+        cwList.forEach(cw => {
+          const option = document.createElement('option');
+          option.value = cw.id;
+          option.textContent = cw.title;
+          
+          // 상태 뱃지 추가
+          const badge = document.createElement('span');
+          badge.className = `badge badge-${cw.state.toLowerCase()}`;
+          badge.textContent = cw.state;
+          option.appendChild(badge);
+          
+          select.appendChild(option);
+        });
+        
+        log(`✅ ${cwList.length}개 과제 로드 완료`);
+        loadStudents();
+      }
+      
+      // 학생 로드 함수
+      function loadStudents() {
+        const courseId = document.getElementById('courseSelect').value;
+        const courseWorkId = document.getElementById('courseWorkSelect').value;
+        
+        if (!courseId || !courseWorkId) {
+          document.getElementById('studentList').innerHTML = '';
+          document.getElementById('studentCountInfo').textContent = '과목과 과제를 먼저 선택하세요';
+          updateButtonStates();
+          return;
+        }
+        
+        const studentList = document.getElementById('studentList');
+        studentList.innerHTML = '<div class="student-item">학생 로딩 중...</div>';
+        document.getElementById('studentCountInfo').textContent = '학생 로딩 중...';
+        updateButtonStates();
+        
+        log(`📥 학생 제출물 로딩 중...`);
+        
+        google.script.run
+          .withSuccessHandler(studentHandler)
+          .withFailureHandler(errorHandler)
+          .getStudentSubmissionList(courseId, courseWorkId);
+      }
+      
+      // 학생 응답 처리 함수
+      function studentHandler(data) {
+        const studentList = document.getElementById('studentList');
+        studentList.innerHTML = '';
+        studentData = data || [];
+        
+        if (studentData.length === 0) {
+          studentList.innerHTML = '<div class="student-item">학생 제출물이 없습니다</div>';
+          document.getElementById('studentCountInfo').textContent = '학생 제출물을 찾을 수 없습니다';
+          log('⚠️ 학생 제출물을 찾을 수 없습니다');
+          updateButtonStates();
+          return;
+        }
+        
+        // 상태별 제출물 개수 계산
+        const stateCounts = studentData.reduce((acc, item) => {
+          acc[item.state] = (acc[item.state] || 0) + 1;
+          return acc;
+        }, {});
+        
+        // 개수 정보 표시
+        const countInfo = document.getElementById('studentCountInfo');
+        countInfo.innerHTML = `${studentData.length}개 제출물 발견 `;
+        
+        // 각 상태별 뱃지 추가
+        Object.entries(stateCounts).forEach(([state, count]) => {
+          const badge = document.createElement('span');
+          badge.className = 'badge badge-count';
+          badge.textContent = `${state}: ${count}`;
+          countInfo.appendChild(badge);
+        });
+        
+        // 최대 30개 학생만 표시
+        const displayedCount = Math.min(studentData.length, 30);
+        studentData.slice(0, 30).forEach((item, index) => {
+          const studentItem = document.createElement('div');
+          studentItem.className = 'student-item';
+          
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.className = 'student-checkbox';
+          checkbox.id = `student-${index}`;
+          checkbox.value = index;
+          checkbox.addEventListener('change', updateButtonStates);
+          
+          const label = document.createElement('label');
+          label.htmlFor = `student-${index}`;
+          
+          // 상태에 따른 이모지 추가
+          const statusEmoji = item.state === 'TURNED_IN' ? '📝' : 
+                           item.state === 'RETURNED' ? '✅' : '⏳';
+                           
+          label.textContent = `${statusEmoji} ${item.name} `;
+          
+          // 상태 뱃지 추가
+          const badge = document.createElement('span');
+          badge.className = `badge badge-${item.state.toLowerCase()}`;
+          badge.textContent = item.state;
+          label.appendChild(badge);
+          
+          studentItem.appendChild(checkbox);
+          studentItem.appendChild(label);
+          studentList.appendChild(studentItem);
+        });
+        
+        // 30개 이상인 경우 경고 표시
+        if (studentData.length > 30) {
+          log(`⚠️ ${studentData.length}개 제출물 중 처리 제한으로 처음 30개만 표시합니다`);
+          showStatus(`처리 제한으로 ${studentData.length}개 중 처음 30개만 표시합니다`, 'warning');
+        } else {
+          log(`✅ ${studentData.length}개 학생 제출물 로드 완료`);
+        }
+        
+        updateButtonStates();
+      }
+      
+      // 오류 처리 함수
+      function errorHandler(error) {
+        log(`❌ 오류: ${error.message || error}`);
+        showStatus(`오류: ${error.message || error}`, 'error');
+      }
+      
+      // 모든 학생 선택 함수
+      function selectAllStudents() {
+        const checkboxes = document.querySelectorAll('.student-checkbox');
+        checkboxes.forEach(cb => {
+          cb.checked = true;
+        });
+        updateButtonStates();
+      }
+      
+      // 모든 학생 선택 해제 함수
+      function deselectAllStudents() {
+        const checkboxes = document.querySelectorAll('.student-checkbox');
+        checkboxes.forEach(cb => {
+          cb.checked = false;
+        });
+        updateButtonStates();
+      }
+      
+      // 선택된 학생 채점 함수
+      function gradeSelectedStudents() {
+        // 체크된 모든 체크박스 수집
+        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+        if (checkboxes.length === 0) {
+          showStatus('최소한 한 명의 학생을 선택해주세요', 'warning');
+          return;
+        }
+        
+        // 선택된 학생 인덱스 배열 생성
+        const selectedIndices = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        
+        // 선택된 학생 데이터 수집
+        const selectedStudents = selectedIndices.map(idx => studentData[idx]);
+        totalSelected = selectedStudents.length;
+        
+        // 채점 확인
+        if (!confirm(`${totalSelected}명의 학생 제출물을 채점하시겠습니까?`)) {
+          return;
+        }
+        
+        // 처리 상태로 UI 업데이트
+        isProcessing = true;
+        processedCount = 0;
+        document.getElementById('gradeBtn').disabled = true;
+        document.getElementById('gradeBtnText').innerHTML = '<span class="loading-spinner"></span> 채점 진행 중...';
+        document.getElementById('progressContainer').style.display = 'block';
+        document.getElementById('progressBar').style.width = '0%';
+        updateButtonStates();
+        
+        log(`🚀 ${totalSelected}명의 제출물 채점 시작`);
+        showStatus(`${totalSelected}명의 제출물 채점 중...`, 'warning');
+        
+        // 과목 및 과제 ID 가져오기
+        const courseId = document.getElementById('courseSelect').value;
+        const courseWorkId = document.getElementById('courseWorkSelect').value;
+        
+        // API 제한을 방지하기 위해 지연시간을 두고 각 학생 채점
+        selectedStudents.forEach((student, index) => {
+          setTimeout(() => {
+            log(`⏳ 채점 ${index + 1}/${totalSelected}: ${student.name}`);
+            
+            google.script.run
+              .withSuccessHandler(result => handleGradingResult(result, student))
+              .withFailureHandler(error => handleGradingError(error, student))
+              .autoGradeStudentEssay(
+                student.name,
+                student.docId,
+                courseId,
+                courseWorkId,
+                student.submissionId
+              );
+          }, index * 5000); // 학생당 5초 간격으로 처리
+        });
+      }
+      
+      // 채점 결과 처리 함수
+      function handleGradingResult(result, student) {
+        processedCount++;
+        updateProgress();
+        
+        if (result.score !== null) {
+          let statusSymbol = '❓';
+          if (result.scoreAssigned) statusSymbol = '✅';
+          else if (result.score !== null) statusSymbol = '📊';
+          else statusSymbol = '❌';
+          
+          const feedbackSymbol = result.feedbackAdded ? '✅' : '❌';
+          
+          log(`${statusSymbol} ${student.name} | 점수: ${result.score} | ` +
+              `점수 할당: ${result.scoreAssigned ? 'Yes' : 'No'} | ` +
+              `피드백: ${feedbackSymbol} (${result.feedbackCount || 0} 항목)`);
+          
+          // 오류 메시지가 있는 경우
+          if (result.error) {
+            log(`⚠️ 오류 상세: ${result.error}`);
+          }
+        } else {
+          log(`⚠️ ${student.name} | 오류: ${result.error || '알 수 없는 오류'}`);
+        }
+        
+        checkIfComplete();
+      }
+      
+      // 채점 오류 처리 함수
+      function handleGradingError(error, student) {
+        processedCount++;
+        updateProgress();
+        log(`❌ ${student.name} 채점 오류: ${error.message || error}`);
+        checkIfComplete();
+      }
+      
+      // 진행률 업데이트 함수
+      function updateProgress() {
+        const percent = Math.round((processedCount / totalSelected) * 100);
+        document.getElementById('progressBar').style.width = `${percent}%`;
+      }
+      
+      // 모든 처리 완료 확인 함수
+      function checkIfComplete() {
+        if (processedCount >= totalSelected) {
+          log(`✅ 채점 완료: ${processedCount}/${totalSelected} 제출물 처리됨`);
+          showStatus(`채점 완료: ${processedCount}/${totalSelected} 제출물 처리됨`, 'success');
+          
+          // UI 초기화
+          isProcessing = false;
+          document.getElementById('gradeBtn').disabled = false;
+          document.getElementById('gradeBtnText').textContent = '✅ 선택한 학생 채점하기';
+          
+          // 2초 후 진행 막대 숨기기
+          setTimeout(() => {
+            document.getElementById('progressContainer').style.display = 'none';
+          }, 2000);
+          
+          updateButtonStates();
+        }
+      }
+      
+      // 버튼 상태 업데이트 함수
+      function updateButtonStates() {
+        const courseId = document.getElementById('courseSelect').value;
+        const courseWorkId = document.getElementById('courseWorkSelect').value;
+        const checkedStudents = document.querySelectorAll('.student-checkbox:checked').length;
+        
+        // 채점 버튼
+        document.getElementById('gradeBtn').disabled = 
+          isProcessing || !courseId || !courseWorkId || checkedStudents === 0;
+        
+        // 전체 선택/해제 버튼
+        const studentCount = document.querySelectorAll('.student-checkbox').length;
+        document.getElementById('selectAllBtn').disabled = 
+          isProcessing || studentCount === 0;
+        document.getElementById('deselectAllBtn').disabled = 
+          isProcessing || studentCount === 0;
+      }
+      
+      // 인증 초기화 함수
+      function resetAuth() {
+        if (confirm("정말 인증 정보를 초기화하시겠습니까?\n모든 토큰이 삭제되며 다시 인증해야 합니다.")) {
+          log("🔄 인증 정보 초기화 중...");
+          
+          google.script.run
+            .withSuccessHandler(function() {
+              log("✅ 인증 정보가 초기화되었습니다. 3초 후 페이지가 새로고침됩니다.");
+              setTimeout(function() {
+                window.top.location.reload();
+              }, 3000);
+            })
+            .withFailureHandler(function(error) {
+              log(`❌ 인증 초기화 실패: ${error.message || error}`);
+              showStatus(`인증 초기화 실패: ${error.message || error}`, 'error');
+            })
+            .resetOAuthAuthorization();
+        }
+      }
+      
+      // 시스템 프롬프트 관련 함수들
+      function togglePromptSettings() {
+        const container = document.getElementById('promptSettingsContainer');
+        if (container.style.display === 'none') {
+          container.style.display = 'block';
+          loadSystemPrompt();
+        } else {
+          container.style.display = 'none';
+        }
+      }
+
+      // 시스템 프롬프트 로드
+      function loadSystemPrompt() {
+        log('📄 시스템 프롬프트 로드 중...');
+        google.script.run
+          .withSuccessHandler(prompt => {
+            document.getElementById('systemPrompt').value = prompt;
+            log('✅ 시스템 프롬프트 로드 완료');
+          })
+          .withFailureHandler(error => {
+            log(`❌ 프롬프트 로드 오류: ${error.message || error}`);
+            showStatus(`프롬프트 로드 오류: ${error.message || error}`, 'error');
+          })
+          .getSystemPrompt();
+      }
+
+      // 시스템 프롬프트 저장
+      function savePrompt() {
+        const prompt = document.getElementById('systemPrompt').value;
+        if (!prompt || prompt.trim() === '') {
+          showStatus('프롬프트를 입력해주세요', 'warning');
+          return;
+        }
+
+        log('💾 시스템 프롬프트 저장 중...');
+        google.script.run
+          .withSuccessHandler(result => {
+            if (result) {
+              log('✅ 시스템 프롬프트가 성공적으로 저장되었습니다');
+              showStatus('시스템 프롬프트가 저장되었습니다', 'success');
+            } else {
+              log('⚠️ 시스템 프롬프트 저장 실패');
+              showStatus('시스템 프롬프트 저장에 실패했습니다', 'error');
+            }
+          })
+          .withFailureHandler(error => {
+            log(`❌ 프롬프트 저장 오류: ${error.message || error}`);
+            showStatus(`프롬프트 저장 오류: ${error.message || error}`, 'error');
+          })
+          .saveSystemPrompt(prompt);
+      }
+
+      // 시스템 프롬프트 초기화
+      function resetPromptToDefault() {
+        if (!confirm('정말로 시스템 프롬프트를 기본값으로 초기화하시겠습니까?')) {
+          return;
+        }
+
+        log('🔄 시스템 프롬프트 초기화 중...');
+        google.script.run
+          .withSuccessHandler(result => {
+            if (result) {
+              log('✅ 시스템 프롬프트가 기본값으로 초기화되었습니다');
+              showStatus('시스템 프롬프트가 초기화되었습니다', 'success');
+              loadSystemPrompt(); // 초기화된 프롬프트 다시 로드
+            } else {
+              log('⚠️ 시스템 프롬프트 초기화 실패');
+              showStatus('시스템 프롬프트 초기화에 실패했습니다', 'error');
+            }
+          })
+          .withFailureHandler(error => {
+            log(`❌ 프롬프트 초기화 오류: ${error.message || error}`);
+            showStatus(`프롬프트 초기화 오류: ${error.message || error}`, 'error');
+          })
+          .resetSystemPromptToDefault();
+      }
+      
+      // 페이지 로드 시 과목 목록 초기화
+      window.onload = function() {
+        log("📚 애플리케이션 초기화됨");
+        
+        google.script.run
+          .withSuccessHandler(courses => {
+            const select = document.getElementById('courseSelect');
+            
+            if (!courses || courses.length === 0) {
+              select.innerHTML = '<option value="">과목을 찾을 수 없음</option>';
+              log("⚠️ 사용 가능한 과목이 없습니다");
+              return;
+            }
+            
+            courses.forEach(course => {
+              const option = document.createElement('option');
+              option.value = course.id;
+              option.textContent = course.name;
+              select.appendChild(option);
+            });
+            
+            log(`✅ ${courses.length}개 과목 로드 완료`);
+            loadCourseWork();
+          })
+          .withFailureHandler(error => {
+            log(`❌ 과목 로드 오류: ${error.message || error}`);
+            showStatus(`과목 로드 오류: ${error.message || error}`, 'error');
+          })
+          .getCourses();
+      };
+    </script>
+  </body>
+</html>

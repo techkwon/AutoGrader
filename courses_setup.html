@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>과목 설정</title>
+    <style>
+      :root {
+        --primary-color: #4285f4;
+        --danger-color: #ea4335;
+        --success-color: #34a853;
+        --warning-color: #fbbc05;
+        --light-gray: #f9f9f9;
+        --border-color: #ddd;
+      }
+      
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        padding: 20px;
+        margin: 0;
+        background-color: #f5f5f5;
+        color: #333;
+        line-height: 1.6;
+      }
+      
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      
+      h2 {
+        color: var(--primary-color);
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      
+      .setup-step {
+        background: white;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+        border-left: 4px solid var(--primary-color);
+      }
+      
+      .setup-title {
+        font-weight: bold;
+        font-size: 18px;
+        margin-bottom: 15px;
+      }
+      
+      label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 5px;
+      }
+      
+      input[type="text"], button {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        font-size: 14px;
+      }
+      
+      button {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.3s;
+        margin-top: 15px;
+      }
+      
+      button:hover {
+        background-color: #3367d6;
+      }
+      
+      button:disabled {
+        background-color: #a8c7fa;
+        cursor: not-allowed;
+      }
+      
+      .status-banner {
+        padding: 10px 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        display: none;
+      }
+      
+      .status-banner.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      
+      .status-banner.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      
+      .status-banner.warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+      }
+      
+      .info-box {
+        background-color: #f0f7ff;
+        padding: 15px;
+        border-radius: 4px;
+        border-left: 4px solid var(--primary-color);
+        margin-bottom: 20px;
+      }
+      
+      .info-title {
+        font-weight: bold;
+        color: var(--primary-color);
+        margin-bottom: 5px;
+      }
+      
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      
+      th, td {
+        border: 1px solid var(--border-color);
+        padding: 8px;
+        text-align: left;
+      }
+      
+      th {
+        background-color: var(--light-gray);
+      }
+      
+      .actions {
+        text-align: center;
+      }
+      
+      .table-container {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+      }
+      
+      .btn-small {
+        padding: 3px 8px;
+        margin: 0 2px;
+        font-size: 12px;
+        width: auto;
+        display: inline-block;
+      }
+      
+      .btn-danger {
+        background-color: var(--danger-color);
+      }
+      
+      .btn-warning {
+        background-color: var(--warning-color);
+        color: #333;
+      }
+      
+      .course-form {
+        background-color: var(--light-gray);
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+      }
+      
+      .progress-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+      }
+      
+      .progress-step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+      }
+      
+      .progress-step::after {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background-color: var(--border-color);
+        z-index: 1;
+      }
+      
+      .progress-step:last-child::after {
+        display: none;
+      }
+      
+      .step-number {
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        border-radius: 50%;
+        background-color: var(--border-color);
+        color: white;
+        margin: 0 auto 5px;
+        position: relative;
+        z-index: 2;
+      }
+      
+      .progress-step.active .step-number {
+        background-color: var(--primary-color);
+      }
+      
+      .progress-step.completed .step-number {
+        background-color: var(--success-color);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>📚 Google Classroom 자동 채점기 - 초기 설정</h2>
+      
+      <div id="statusBanner" class="status-banner"></div>
+      
+      <!-- 진행 상태 표시 -->
+      <div class="progress-indicator">
+        <div class="progress-step completed">
+          <div class="step-number">1</div>
+          <div>OAuth 설정</div>
+        </div>
+        <div class="progress-step completed">
+          <div class="step-number">2</div>
+          <div>API 키 설정</div>
+        </div>
+        <div class="progress-step completed">
+          <div class="step-number">3</div>
+          <div>문서 설정</div>
+        </div>
+        <div class="progress-step active">
+          <div class="step-number">4</div>
+          <div>과목 설정</div>
+        </div>
+      </div>
+      
+      <div class="info-box">
+        <div class="info-title">📚 과목 설정 안내</div>
+        <p>자동 채점기에서 사용할 Google Classroom 과목을 설정합니다.</p>
+        <p>Google Classroom에서 과목을 가져오거나 수동으로 추가할 수 있습니다.</p>
+      </div>
+      
+      <div class="setup-step">
+        <div class="setup-title">과목 관리</div>
+        
+        <button id="fetchCoursesBtn" onclick="fetchCoursesFromClassroom()">Google Classroom에서 과목 가져오기</button>
+        
+        <div id="addCourseForm" class="course-form">
+          <div class="setup-title">과목 수동 추가</div>
+          <label for="courseName">과목 이름:</label>
+          <input type="text" id="courseName" placeholder="예: 1반 기술" />
+          
+          <label for="courseId">과목 ID:</label>
+          <input type="text" id="courseId" placeholder="예: 123456789" />
+          
+          <button id="addCourseBtn" onclick="addCourse()">과목 추가</button>
+        </div>
+        
+        <div class="table-container">
+          <table id="coursesTable">
+            <thead>
+              <tr>
+                <th>과목 이름</th>
+                <th>과목 ID</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody id="coursesTableBody">
+              <!-- 과목 목록이 여기에 추가됨 -->
+              <tr>
+                <td colspan="3" style="text-align: center;">과목이 없습니다</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <button id="completeSetupBtn" onclick="completeSetup()" disabled>설정 완료 및 앱 시작하기</button>
+      </div>
+    </div>
+
+    <script>
+      // 전역 변수
+      let coursesList = [];
+      
+      // 페이지 로드 시 실행
+      window.onload = function() {
+        loadCoursesList();
+      };
+      
+      // 상태 메시지 표시 함수
+      function showStatus(message, type = 'success') {
+        const banner = document.getElementById('statusBanner');
+        banner.textContent = message;
+        banner.className = 'status-banner ' + type;
+        banner.style.display = 'block';
+        
+        // 성공 메시지는 5초 후 자동으로 숨김
+        if (type === 'success') {
+          setTimeout(() => {
+            banner.style.display = 'none';
+          }, 5000);
+        }
+      }
+      
+      // 과목 목록 불러오기
+      function loadCoursesList() {
+        google.script.run
+          .withSuccessHandler(function(courses) {
+            coursesList = courses || [];
+            updateCoursesTable();
+            updateButtonState();
+          })
+          .withFailureHandler(function(error) {
+            showStatus('과목 목록을 불러오는 중 오류가 발생했습니다: ' + (error.message || error), 'error');
+          })
+          .getCourses();
+      }
+      
+      // 과목 테이블 업데이트
+      function updateCoursesTable() {
+        const tableBody = document.getElementById('coursesTableBody');
+        
+        if (!coursesList || coursesList.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">과목이 없습니다</td></tr>';
+          return;
+        }
+        
+        let html = '';
+        coursesList.forEach((course, index) => {
+          html += `
+            <tr>
+              <td>${course.name}</td>
+              <td>${course.id}</td>
+              <td class="actions">
+                <button class="btn-small btn-warning" onclick="editCourse(${index})">수정</button>
+                <button class="btn-small btn-danger" onclick="deleteCourse(${index})">삭제</button>
+              </td>
+            </tr>
+          `;
+        });
+        
+        tableBody.innerHTML = html;
+      }
+      
+      // Google Classroom에서 과목 가져오기
+      function fetchCoursesFromClassroom() {
+        const fetchBtn = document.getElementById('fetchCoursesBtn');
+        fetchBtn.disabled = true;
+        fetchBtn.textContent = '과목 가져오는 중...';
+        
+        showStatus('Google Classroom에서 과목을 가져오는 중...', 'warning');
+        
+        google.script.run
+          .withSuccessHandler(function(result) {
+            fetchBtn.disabled = false;
+            fetchBtn.textContent = 'Google Classroom에서 과목 가져오기';
+            
+            if (result.success) {
+              if (result.courses.length === 0) {
+                showStatus('가져올 수 있는 과목이 없습니다. 수동으로 추가하세요.', 'warning');
+                return;
+              }
+              
+              // 이미 있는 과목 ID 필터링
+              const existingIds = coursesList.map(c => c.id);
+              const newCourses = result.courses.filter(c => !existingIds.includes(c.id));
+              
+              if (newCourses.length === 0) {
+                showStatus('모든 과목이 이미 추가되어 있습니다.', 'warning');
+                return;
+              }
+              
+              // 새 과목 추가
+              coursesList = [...coursesList, ...newCourses];
+              updateCoursesTable();
+              updateButtonState();
+              
+              // 서버에 저장
+              saveCoursesList();
+              
+              showStatus(`${newCourses.length}개 과목을 추가했습니다.`, 'success');
+            } else {
+              showStatus('과목을 가져오지 못했습니다: ' + (result.message || '알 수 없는 오류'), 'error');
+            }
+          })
+          .withFailureHandler(function(error) {
+            fetchBtn.disabled = false;
+            fetchBtn.textContent = 'Google Classroom에서 과목 가져오기';
+            showStatus('과목을 가져오는 중 오류가 발생했습니다: ' + (error.message || error), 'error');
+          })
+          .fetchCoursesFromClassroom();
+      }
+      
+      // 과목 수동 추가
+      function addCourse() {
+        const name = document.getElementById('courseName').value.trim();
+        const id = document.getElementById('courseId').value.trim();
+        
+        if (!name || !id) {
+          showStatus('과목 이름과 ID를 모두 입력해주세요.', 'error');
+          return;
+        }
+        
+        // ID 숫자 검증
+        if (!/^\d+$/.test(id)) {
+          showStatus('과목 ID는 숫자만 입력해주세요.', 'error');
+          return;
+        }
+        
+        // 중복 ID 확인
+        if (coursesList.some(c => c.id === id)) {
+          showStatus('이미 동일한 ID의 과목이 있습니다.', 'error');
+          return;
+        }
+        
+        // 과목 추가
+        coursesList.push({ name, id });
+        
+        // 입력 필드 초기화
+        document.getElementById('courseName').value = '';
+        document.getElementById('courseId').value = '';
+        
+        // 테이블 업데이트
+        updateCoursesTable();
+        updateButtonState();
+        
+        // 서버에 저장
+        saveCoursesList();
+        
+        showStatus('과목이 추가되었습니다.', 'success');
+      }
+      
+      // 과목 수정
+      function editCourse(index) {
+        if (index < 0 || index >= coursesList.length) {
+          showStatus('유효하지 않은 과목입니다.', 'error');
+          return;
+        }
+        
+        const course = coursesList[index];
+        
+        // 수정할 이름 입력 받기
+        const newName = prompt('과목 이름을 수정하세요:', course.name);
+        if (newName === null) return; // 취소 버튼 클릭 시
+        
+        if (newName.trim() === '') {
+          showStatus('과목 이름은 비워둘 수 없습니다.', 'error');
+          return;
+        }
+        
+        // 과목 이름 업데이트
+        coursesList[index].name = newName.trim();
+        
+        // 테이블 업데이트
+        updateCoursesTable();
+        
+        // 서버에 저장
+        saveCoursesList();
+        
+        showStatus('과목 이름이 수정되었습니다.', 'success');
+      }
+      
+      // 과목 삭제
+      function deleteCourse(index) {
+        if (index < 0 || index >= coursesList.length) {
+          showStatus('유효하지 않은 과목입니다.', 'error');
+          return;
+        }
+        
+        const course = coursesList[index];
+        
+        // 삭제 확인
+        if (!confirm(`"${course.name}" 과목을 삭제하시겠습니까?`)) {
+          return;
+        }
+        
+        // 과목 삭제
+        coursesList.splice(index, 1);
+        
+        // 테이블 업데이트
+        updateCoursesTable();
+        updateButtonState();
+        
+        // 서버에 저장
+        saveCoursesList();
+        
+        showStatus('과목이 삭제되었습니다.', 'success');
+      }
+      
+      // 과목 목록 서버에 저장
+      function saveCoursesList() {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (!result) {
+              showStatus('과목 목록 저장 중 오류가 발생했습니다.', 'error');
+            }
+          })
+          .withFailureHandler(function(error) {
+            showStatus('과목 목록 저장 오류: ' + (error.message || error), 'error');
+          })
+          .updateCoursesList(coursesList);
+      }
+      
+      // 설정 완료
+      function completeSetup() {
+        const completeBtn = document.getElementById('completeSetupBtn');
+        completeBtn.disabled = true;
+        completeBtn.textContent = '설정 완료 중...';
+        
+        showStatus('설정을 완료하고 앱을 시작합니다...', 'warning');
+        
+        // 서버에 최종 저장 요청
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result) {
+              showStatus('설정이 완료되었습니다. 앱을 시작합니다...', 'success');
+              
+              // 3초 후 페이지 새로고침
+              setTimeout(function() {
+                window.top.location.reload();
+              }, 3000);
+            } else {
+              completeBtn.disabled = false;
+              completeBtn.textContent = '설정 완료 및 앱 시작하기';
+              showStatus('설정 완료 중 오류가 발생했습니다.', 'error');
+            }
+          })
+          .withFailureHandler(function(error) {
+            completeBtn.disabled = false;
+            completeBtn.textContent = '설정 완료 및 앱 시작하기';
+            showStatus('오류: ' + (error.message || error), 'error');
+          })
+          .updateCoursesList(coursesList);
+      }
+      
+      // 버튼 상태 업데이트
+      function updateButtonState() {
+        const completeBtn = document.getElementById('completeSetupBtn');
+        completeBtn.disabled = coursesList.length === 0;
+      }
+    </script>
+  </body>
+</html>
