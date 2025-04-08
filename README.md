@@ -13,7 +13,7 @@
 
 ---
 
-바로 복사 링크 : https://script.google.com/d/1VWBasfeP-62x5T8Pk-wUSxY1sLTqk6T7-4-sRBBRYSmFfWrlW0ogH9yx/copy
+바로 복사 링크 : https://joo.is/autograder
 
 ## 1. 시스템 개요
 
